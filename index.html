@@ -31,9 +31,9 @@
   }
   button:hover { opacity:0.9; }
   pre {
-    display:none; /* hidden by default */
     background:#1e2023; padding:12px; white-space:pre-wrap; word-break:break-word;
     border-radius:var(--radius); border:1px solid var(--border); color:var(--text); margin-top:12px;
+    display:none;
   }
 </style>
 </head>
@@ -61,11 +61,15 @@ function convert() {
   const text = document.getElementById("input").value;
   if (!text.trim()) return alert("Paste the PowerSchool page first.");
 
+  finalData = parsePowerSchool(text);
+  showOutput();
+}
+
+function parsePowerSchool(text) {
   const lines = text.split("\n");
   const assignments = [];
   let start = false;
 
-  // --- Extract course and term ---
   const courseTermMatch = text.match(/(\d+\s+[A-Za-z ]+)\s+.*?\s+(T\d)/);
   const className = courseTermMatch
     ? courseTermMatch[1].replace(/^\d+\s*/, "").replace(/Advanced/i, "Adv").trim() + " " + courseTermMatch[2]
@@ -77,16 +81,13 @@ function convert() {
     if (!start || !line) continue;
     if (line.startsWith("Assignment Score")) break;
 
-    // Split by tabs first, fallback to multiple spaces
     let cols = line.split("\t");
     if (cols.length < 3) cols = line.split(/\s{2,}/);
-
     if (cols.length < 3) continue;
 
     const name = cols[2];
     const category = cols[1];
 
-    // Find the last column that looks like "number/number"
     let score = null, pts = null;
     for (let i = cols.length - 1; i >= 0; i--) {
       const m = cols[i].match(/^(\d+(\.\d+)?|--)[\/](\d+(\.\d+)?)$/);
@@ -100,19 +101,27 @@ function convert() {
     assignments.push({ name, category, score, pts });
   }
 
-  finalData = {
+  return {
     name: className,
     weights: { Test:0.6, Quiz:0.2, Classwork:0.1, Homework:0.1 },
     assignments
   };
+}
 
+function showOutput() {
   const outputEl = document.getElementById("output");
-  outputEl.style.display = "block"; // show the output box
+  outputEl.style.display = "block";
   outputEl.innerText = JSON.stringify(finalData, null, 2);
 }
 
 function download() {
-  if (!finalData) return alert("Convert first");
+  if (!finalData) {
+    const text = document.getElementById("input").value;
+    if (!text.trim()) return alert("Paste the PowerSchool page first.");
+    finalData = parsePowerSchool(text);
+    showOutput();
+  }
+
   const blob = new Blob([JSON.stringify(finalData, null, 2)], { type:"application/json" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
