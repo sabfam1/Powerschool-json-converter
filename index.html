@@ -22,13 +22,16 @@
     width:100%; height:250px; padding:12px; border-radius:var(--radius); border:1px solid var(--border);
     background:var(--input); color:var(--text); font-family:inherit; resize:vertical; box-sizing:border-box;
   }
+  .buttons {
+    margin-top:12px;
+  }
   button {
     margin-right:10px; padding:10px 16px; border:none; border-radius:var(--radius); font-weight:600; cursor:pointer;
     background:var(--blue); color:#fff; transition:0.2s;
   }
   button:hover { opacity:0.9; }
   pre {
-    display:none; /* hidden initially */
+    display:none; /* hidden by default */
     background:#1e2023; padding:12px; white-space:pre-wrap; word-break:break-word;
     border-radius:var(--radius); border:1px solid var(--border); color:var(--text); margin-top:12px;
   }
@@ -41,10 +44,12 @@
 
 <p>Paste your PowerSchool page text below:</p>
 <textarea id="input" placeholder="Paste PowerSchool page here..."></textarea>
-<br>
-<button onclick="convert()">Convert</button>
-<button onclick="download()">Download JSON</button>
-<button onclick="clearOutput()">Clear</button>
+
+<div class="buttons">
+  <button onclick="convert()">Convert</button>
+  <button onclick="download()">Download JSON</button>
+  <button onclick="clearOutput()">Clear</button>
+</div>
 
 <pre id="output"></pre>
 </div>
@@ -72,13 +77,16 @@ function convert() {
     if (!start || !line) continue;
     if (line.startsWith("Assignment Score")) break;
 
+    // Split by tabs first, fallback to multiple spaces
     let cols = line.split("\t");
     if (cols.length < 3) cols = line.split(/\s{2,}/);
+
     if (cols.length < 3) continue;
 
     const name = cols[2];
     const category = cols[1];
 
+    // Find the last column that looks like "number/number"
     let score = null, pts = null;
     for (let i = cols.length - 1; i >= 0; i--) {
       const m = cols[i].match(/^(\d+(\.\d+)?|--)[\/](\d+(\.\d+)?)$/);
@@ -98,9 +106,9 @@ function convert() {
     assignments
   };
 
-  const output = document.getElementById("output");
-  output.innerText = JSON.stringify(finalData, null, 2);
-  output.style.display = "block"; // show output
+  const outputEl = document.getElementById("output");
+  outputEl.style.display = "block"; // show the output box
+  outputEl.innerText = JSON.stringify(finalData, null, 2);
 }
 
 function download() {
@@ -113,8 +121,9 @@ function download() {
 }
 
 function clearOutput() {
-  document.getElementById("output").innerText = "";
+  document.getElementById("input").value = "";
   document.getElementById("output").style.display = "none";
+  finalData = null;
 }
 </script>
 
