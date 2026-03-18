@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>PowerSchool → JSON</title>
+<style>
+  :root{
+    --bg:#0b0d0f; --card:#151619; --input:#1e2023; --text:#fff; --muted:#94a3b8;
+    --blue:#0a84ff; --danger:#ff3b30; --border:rgba(255,255,255,0.1); --radius:12px;
+  }
+  body {
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",Segoe UI,Roboto,Arial,sans-serif;
+    background:var(--bg); color:var(--text); padding:20px; display:flex; justify-content:center;
+  }
+  .card {
+    background:var(--card); padding:20px; border-radius:var(--radius); width:100%; max-width:700px;
+    box-shadow:0 8px 25px rgba(0,0,0,0.5);
+  }
+  h2 { margin-top:0; color:var(--blue); text-align:center; }
+  p { color:var(--muted); }
+  textarea {
+    width:100%; height:250px; padding:12px; border-radius:var(--radius); border:1px solid var(--border);
+    background:var(--input); color:var(--text); font-family:inherit; resize:vertical; box-sizing:border-box;
+  }
+  button {
+    margin-right:10px; padding:10px 16px; border:none; border-radius:var(--radius); font-weight:600; cursor:pointer;
+    background:var(--blue); color:#fff; transition:0.2s;
+  }
+  button:hover { opacity:0.9; }
+  pre {
+    background:#1e2023; padding:12px; white-space:pre-wrap; word-break:break-word;
+    border-radius:var(--radius); border:1px solid var(--border); color:var(--text); margin-top:12px;
+  }
+</style>
+</head>
+<body>
+
+<div class="card">
+<h2>PowerSchool → JSON Converter</h2>
+
+<p>Paste your PowerSchool page text below:</p>
+<textarea id="input" placeholder="Paste PowerSchool page here..."></textarea>
+<br>
+<button onclick="convert()">Convert</button>
+<button onclick="download()">Download JSON</button>
+
+<pre id="output"></pre>
+</div>
+
+<script>
+let finalData = null;
+
+function convert() {
+  const text = document.getElementById("input").value;
+  if (!text.trim()) return alert("Paste the PowerSchool page first.");
+
+  const lines = text.split("\n");
+  const assignments = [];
+  let start = false;
+
+  // --- Extract course and term ---
+  const courseTermMatch = text.match(/(\d+\s+[A-Za-z ]+)\s+.*?\s+(T\d)/);
+  const className = courseTermMatch
+    ? courseTermMatch[1].replace(/^\d+\s*/, "").replace(/Advanced/i, "Adv").trim() + " " + courseTermMatch[2]
+    : "Unknown";
+
+  for (let line of lines) {
+    line = line.trim();
+    if (!start && line.startsWith("Due Date")) { start = true; continue; }
+    if (!start || !line) continue;
+    if (line.startsWith("Assignment Score")) break;
+
+    // Split by tabs first, fallback to multiple spaces
+    let cols = line.split("\t");
+    if (cols.length < 3) cols = line.split(/\s{2,}/);
+
+    if (cols.length < 3) continue;
+
+    const name = cols[2];
+    const category = cols[1];
+
+    // Find the last column that looks like "number/number"
+    let score = null, pts = null;
+    for (let i = cols.length - 1; i >= 0; i--) {
+      const m = cols[i].match(/^(\d+(\.\d+)?|--)[\/](\d+(\.\d+)?)$/);
+      if (m) {
+        score = m[1] === "--" ? null : parseFloat(m[1]);
+        pts = parseFloat(m[3]);
+        break;
+      }
+    }
+
+    assignments.push({ name, category, score, pts });
+  }
+
+  finalData = {
+    name: className,
+    weights: { Test:0.6, Quiz:0.2, Classwork:0.1, Homework:0.1 },
+    assignments
+  };
+
+  document.getElementById("output").innerText = JSON.stringify(finalData, null, 2);
+}
+
+function download() {
+  if (!finalData) return alert("Convert first");
+  const blob = new Blob([JSON.stringify(finalData, null, 2)], { type:"application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = finalData.name + ".json";
+  a.click();
+}
+</script>
+
+</body>
+</html>
