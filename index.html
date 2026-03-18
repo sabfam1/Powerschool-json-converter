@@ -28,6 +28,7 @@
   }
   button:hover { opacity:0.9; }
   pre {
+    display:none; /* hidden initially */
     background:#1e2023; padding:12px; white-space:pre-wrap; word-break:break-word;
     border-radius:var(--radius); border:1px solid var(--border); color:var(--text); margin-top:12px;
   }
@@ -43,6 +44,7 @@
 <br>
 <button onclick="convert()">Convert</button>
 <button onclick="download()">Download JSON</button>
+<button onclick="clearOutput()">Clear</button>
 
 <pre id="output"></pre>
 </div>
@@ -70,16 +72,13 @@ function convert() {
     if (!start || !line) continue;
     if (line.startsWith("Assignment Score")) break;
 
-    // Split by tabs first, fallback to multiple spaces
     let cols = line.split("\t");
     if (cols.length < 3) cols = line.split(/\s{2,}/);
-
     if (cols.length < 3) continue;
 
     const name = cols[2];
     const category = cols[1];
 
-    // Find the last column that looks like "number/number"
     let score = null, pts = null;
     for (let i = cols.length - 1; i >= 0; i--) {
       const m = cols[i].match(/^(\d+(\.\d+)?|--)[\/](\d+(\.\d+)?)$/);
@@ -99,7 +98,9 @@ function convert() {
     assignments
   };
 
-  document.getElementById("output").innerText = JSON.stringify(finalData, null, 2);
+  const output = document.getElementById("output");
+  output.innerText = JSON.stringify(finalData, null, 2);
+  output.style.display = "block"; // show output
 }
 
 function download() {
@@ -109,6 +110,11 @@ function download() {
   a.href = URL.createObjectURL(blob);
   a.download = finalData.name + ".json";
   a.click();
+}
+
+function clearOutput() {
+  document.getElementById("output").innerText = "";
+  document.getElementById("output").style.display = "none";
 }
 </script>
 
